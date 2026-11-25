@@ -139,6 +139,13 @@ textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size
 .pcard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;background:var(--pan);border-radius:10px;padding:12px;margin-top:8px}
 .pcard p{margin:0}
 .pnw{display:flex;align-items:center;gap:10px}
+.presets{padding-bottom:0}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:12px}
+.pc{display:grid;grid-template-rows:auto auto 1fr auto;gap:8px;background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:14px}
+.pc h3{margin:0;font-size:24px}
+.pc p{margin:0;font-size:15px}
+.pc .meta{font-size:13px;color:var(--mut)}
+.pc[aria-current=true]{border-color:var(--tq);box-shadow:inset 0 0 0 1px var(--tq)}
 @media(max-width:900px){.grid2,.plan{grid-template-columns:minmax(0,1fr)}.snap{position:static}.levels{max-height:340px}}
 @media(max-width:600px){.top .wrap{grid-template-columns:minmax(0,1fr)}.cols{height:120px}.bar{grid-template-columns:9.2em minmax(0,1fr) 2.2em;font-size:14px}.idx thead{display:none}.idx tr{display:grid;grid-template-columns:auto minmax(0,1fr);padding:8px 0;border-bottom:1px solid var(--line)}.idx td{border:0;padding:2px 6px}.idx td:nth-child(3),.idx td:nth-child(4){grid-column:1/-1}.ed td.b button{min-width:40px;padding:0 4px}}
 @media(prefers-reduced-motion:reduce){.col i,.bar .t i{transition:none}}
@@ -160,6 +167,13 @@ textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size
 </header>
 
 <main>
+<section class="band presets">
+ <div class="wrap">
+  <h2>Sample builds</h2>
+  <p class="mut">Five complete plans to level 30. Load one as a starting point; Undo brings back what you had.</p>
+  <div class="pgrid" id="presets"></div>
+ </div>
+</section>
 <section class="band">
  <div class="wrap grid2">
   <div>
@@ -549,17 +563,37 @@ function clean(o){
  b.view=Math.max(1,Math.min(50,n(o.view)||1));b.sel=Math.max(2,Math.min(50,n(o.sel)||2));
  return b;
 }
-function sample(){
- const b=blank();
- Object.assign(b,{name:'Smooth-talking sharpshooter',sp:[5,6,5,5,8,6,5],traits:['Wild Wasteland','Trigger Discipline'],tags:['Gun','Spc','Lck'],tag4:'Rep',imp:[0,1,0,0,0,1,0],impLv:14,view:16,sel:16});
- S=b;
- const perks={2:'Rapid Reload',4:'Educated',6:'Toughness',8:'Strong Back',10:'Finesse',12:'Sniper',14:'Light Step',16:'Action Boy / Action Girl'};
- const order=['Gun','Spc','Gun','Lck','Rep','Sci','Med','Spc','Snk','Gun','Rep'];let j=0;
- for(let lv=2;lv<=16;lv++){const d=L(lv);if(perks[lv])d.perk=perks[lv];
-  let a=avail(lv),guard=0;while(a>0&&guard++<200){const k=order[j++%order.length];const cur=skills(lv,true)[SK.findIndex(x=>x[0]===k)];if(cur>=100)continue;d.sk[k]=(d.sk[k]||0)+1;a--;}}
- return b;
+const PR=[
+{name:'Revolver cowboy',g:'gun',blurb:'Revolvers, lever guns and dynamite, with a knife for close work. Strong in V.A.T.S. and handy at the workbench.',
+ sp:[6,6,5,4,7,7,5],traits:['Small Frame','Built to Destroy'],tags:['Gun','Rep','Spc'],tag4:'',imp:[0,0,0,0,0,0,1],impLv:12,
+ perks:{2:'Rapid Reload',4:'Educated',6:'Gunslinger',8:'Cowboy',10:'Finesse',12:'Hand Loader',14:'Center of Mass',16:'Action Boy / Action Girl',18:'Living Anatomy',20:'Better Criticals',22:"Grim Reaper's Sprint",24:'Toughness',26:'Nerves of Steel',28:'Action Boy / Action Girl',30:'Toughness'},
+ goals:[['Gun',45],['Mel',45],['Rep',70],['Gun',70],['Spc',70],['Med',70],['Gun',100],['Lck',70],['Spc',100],['Rep',100],['Sci',70]]},
+{name:'Silent sniper',g:'crosshair',blurb:'Long rifles from the dark. Crits, headshots and never being seen.',
+ sp:[5,7,5,3,7,8,5],traits:['Trigger Discipline','Wild Wasteland'],tags:['Gun','Snk','Med'],tag4:'',imp:[0,0,0,0,0,0,0],impLv:12,
+ perks:{2:'Swift Learner',4:'Educated',6:'Toughness',8:'Commando',10:'Finesse',12:'Sniper',14:'Intense Training',16:'Better Criticals',18:'Silent Running',20:"Grim Reaper's Sprint",22:'Light Step',24:'Mister Sandman',26:'Nerves of Steel',28:'Action Boy / Action Girl',30:'Action Boy / Action Girl'},it:{14:6},
+ goals:[['Gun',50],['Snk',60],['Gun',70],['Med',60],['Lck',60],['Gun',100],['Snk',100],['Rep',70],['Sci',50],['Med',100]]},
+{name:'Sledgehammer brute',g:'blade',blurb:'Big swings, high health, knockdowns. Walks through damage to get in close.',
+ sp:[8,5,7,2,5,7,6],traits:['Heavy Handed','Kamikaze'],tags:['Mel','Una','Med'],tag4:'',imp:[0,1,0,0,0,0,0],impLv:16,
+ perks:{2:'Intense Training',4:'Educated',6:'Toughness',8:'Super Slam!',10:'Finesse',12:'Life Giver',14:'Purifier',16:'Action Boy / Action Girl',18:'Unstoppable Force',20:'Ninja',22:'Piercing Strike',24:'Slayer',26:'Toughness',28:'Stonewall',30:'Better Criticals'},it:{2:0},
+ goals:[['Mel',45],['Mel',90],['Snk',50],['Una',70],['Snk',80],['Una',90],['Med',70],['Rep',50],['Mel',100],['Una',100]]},
+{name:'Laser scientist',g:'bolt',blurb:'Energy weapons, robots and terminals. Smart, efficient in V.A.T.S., never short of cells.',
+ sp:[4,7,6,3,9,6,5],traits:['Skilled','Trigger Discipline'],tags:['EW','Sci','Rep'],tag4:'',imp:[0,0,0,0,0,0,0],impLv:12,
+ perks:{2:'Swift Learner',4:'Educated',6:'Vigilant Recycler',8:'Commando',10:'Math Wrath',12:'Robotics Expert',14:'Light Step',16:'Meltdown',18:'Computer Whiz',20:"Grim Reaper's Sprint",22:'Laser Commander',24:'Life Giver',26:'Lessons Learned',28:'Toughness',30:'Action Boy / Action Girl'},
+ goals:[['Sci',70],['EW',70],['EW',90],['Rep',70],['Med',50],['Sci',100],['EW',100],['Lck',70],['Rep',100],['Snk',50]]},
+{name:'Silver-tongued courier',g:'speech',blurb:'Talks past most fights and lets companions do the rest. Plenty of caps and clever options.',
+ sp:[4,5,5,8,9,4,5],traits:['Good Natured','Wild Wasteland'],tags:['Spc','Bar','Sci'],tag4:'Lck',imp:[0,0,0,0,0,0,0],impLv:12,
+ perks:{2:'Swift Learner',4:'Educated',6:'Ferocious Loyalty',8:'Terrifying Presence',10:'Fortune Finder',12:'Pack Rat',14:'Chemist',16:'Tag!',18:'Computer Whiz',20:'Explorer',22:'Spray and Pray',24:'Robotics Expert',26:'Lessons Learned',28:'Animal Friend',30:'Animal Friend'},
+ goals:[['Spc',70],['Bar',70],['Med',60],['Sci',70],['Spc',100],['Lck',50],['Sur',45],['Bar',100],['Sci',100],['Rep',70],['Gun',50]]}];
+function fromPreset(pr){
+ S=blank();Object.assign(S,{name:pr.name,sp:pr.sp.slice(),traits:pr.traits.slice(),tags:pr.tags.slice(),tag4:pr.tag4,imp:pr.imp.slice(),impLv:pr.impLv,cap:50,dlc:true,view:20,sel:2});
+ for(let lv=2;lv<=30;lv++){const d=L(lv);if(pr.perks[lv])d.perk=pr.perks[lv];if(pr.it&&pr.it[lv]!=null)d.it=pr.it[lv];
+  let a=avail(lv),guard=0;
+  while(a>0&&guard++<400){const sk=skills(lv,true);let g=pr.goals.find(([k,t])=>sk[SK.findIndex(x=>x[0]===k)]<Math.min(t,100));
+   if(!g){const i=sk.reduce((m,v,j)=>v<sk[m]?j:m,0);if(sk[i]>=100)break;g=[SK[i][0]];}
+   d.sk[g[0]]=(d.sk[g[0]]||0)+1;a--;}}
+ return S;
 }
-try{const raw=localStorage.getItem(KEY);S=raw?clean(JSON.parse(raw)):sample();}catch(e){S=sample();}
+try{const raw=localStorage.getItem(KEY);S=raw?clean(JSON.parse(raw)):fromPreset(PR[0]);}catch(e){S=fromPreset(PR[0]);}
 
 function rSpecial(){
  const left=40-S.sp.reduce((a,b)=>a+b,0);
@@ -630,11 +664,14 @@ function rIndex(){
  const rows=PK.filter(p=>(!p[5]||S.dlc)&&(!q||(p[1]+' '+p[4]+' '+reqText(p[3])).toLowerCase().includes(q))).map(p=>{const ok=!unmet(p,Math.max(v,2)).length;return {p,ok};}).filter(r=>!only||r.ok);
  $('idx').innerHTML=rows.length?rows.map(({p,ok})=>`<tr class="${ok?'ok':''}"><td>${p[0]}</td><td class="pn"><div class="pnw">${pic(p[1])}<span>${esc(p[1])}${p[2]>1?' <span class="mut">×'+p[2]+'</span>':''}${p[5]?'<span class="dl">DLC</span>':''}</span></div></td><td>${esc(reqText(p[3]))}</td><td>${esc(p[4])}</td></tr>`).join(''):'<tr><td colspan="4" class="mut">No perks match.</td></tr>';
 }
+function rPresets(){
+ $('presets').innerHTML=PR.map((p,i)=>`<div class="pc" aria-current="${S.name===p.name}"><span class="med big">${ic(p.g)}</span><h3>${esc(p.name)}</h3><p>${esc(p.blurb)}</p><div><p class="meta">${p.sp.map((v,j)=>STA[j][0]+v).join(' ')} · tags ${p.tags.map(k=>SKN[k]).join(', ')}</p><button id="pr${i}" data-a="preset" data-i="${i}" style="margin-top:8px;width:100%">Load this build</button></div></div>`).join('');
+}
 function render(){
  const f=document.activeElement&&document.activeElement.id;
  $('bname').value=S.name;$('cap').value=S.cap;$('dlc').checked=S.dlc;$('cap').disabled=!S.dlc||S.traits.includes("Logan's Loophole");
  $('undo').disabled=!hist.length;
- rSpecial();rTraits();rTags();rSnap();rLevels();rEditor();rIndex();
+ rPresets();rSpecial();rTraits();rTags();rSnap();rLevels();rEditor();rIndex();
  if(f&&$(f)&&$(f)!==document.activeElement&&!$(f).disabled)$(f).focus({preventScroll:true});
 }
 
@@ -642,6 +679,7 @@ document.addEventListener('click',e=>{
  const b=e.target.closest('[data-a]');if(!b||b.tagName==='INPUT')return;const a=b.dataset.a;
  if(a==='sp')commit(()=>{const i=+b.dataset.i;S.sp[i]=Math.max(1,Math.min(10,S.sp[i]+ +b.dataset.d));});
  else if(a==='tag')commit(()=>{const k=b.dataset.k;S.tags=S.tags.includes(k)?S.tags.filter(x=>x!==k):[...S.tags,k].slice(0,3);if(S.tags.includes(S.tag4))S.tag4='';});
+ else if(a==='preset'){commit(()=>{fromPreset(PR[+b.dataset.i]);});$('special').scrollIntoView({behavior:'smooth',block:'start'});}
  else if(a==='imp')commit(()=>{const i=+b.dataset.i;S.imp[i]=S.imp[i]?0:1;});
  else if(a==='sel'){S.sel=+b.dataset.l;S.view=S.sel;save();render();}
  else if(a==='sk')commit(()=>{const d=L(S.sel),k=b.dataset.k,i=SK.findIndex(x=>x[0]===k);let n=+b.dataset.d;
