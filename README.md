@@ -4,7 +4,7 @@ A single-page character build planner for Fallout: New Vegas. Plan SPECIAL, trai
 
 Live site: https://brotherlu.github.io/mojave-build-planner/
 
-- Five sample builds (revolver cowboy, silent sniper, sledgehammer brute, laser scientist, silver-tongued courier) are planned to level 30 and load with one click.
+- Six sample builds (revolver cowboy, silent sniper, sledgehammer brute, demolitions expert, laser scientist, silver-tongued courier) are planned to level 30 and load with one click.
 - Everything is in `index.html`: no build step, no dependencies.
 - Your plan is saved in your browser's local storage; use "Copy build code" to move it elsewhere.
 - Icons are original drawings, not game art.
