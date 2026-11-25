@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mojave Build Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Archivo:wght@400;600;700&display=swap">
+<style>
+/* VOICE everyday hobby tool, confident and dusty, never cute
+   IDEA a desert surveyor's field ledger: one sunbaked band, ruled columns, stamped numbers
+   PICTURE the live character sheet at the chosen level: seven SPECIAL columns and thirteen skill bars
+   COLOUR white ground, terracotta band, ink brown-black, turquoise for values, sun yellow for warnings
+   TYPE Big Shoulders Display (road-sign condensed) + Archivo
+   LAYOUT laptop: band with title and build controls, then creation | snapshot, then level list | level editor, then perk index; phone: one column in that order */
+:root{color-scheme:light dark;--bg:light-dark(#ffffff,#17110e);--ink:light-dark(#1e1714,#f3e9dc);--mut:light-dark(#6b5a4f,#b8a596);--pan:light-dark(#f6efe5,#241b16);--line:light-dark(#e3d6c5,#3a2c24);--band:light-dark(#b94a25,#8a3417);--onb:#fff6ec;--tq:light-dark(#0b7f80,#3cc4be);--tqs:light-dark(#d3eeee,#173b3a);--warn:light-dark(#f2c230,#e0b023);--bad:light-dark(#b3122f,#ff6b81)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.5 Archivo,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3,.num{font-family:"Big Shoulders Display",Impact,sans-serif;letter-spacing:-.01em;line-height:1.05}
+h1{font-size:clamp(36px,5vw,52px);font-weight:800;margin:0;text-wrap:balance}
+h2{font-size:30px;font-weight:800;margin:0 0 4px}
+h3{font-size:22px;font-weight:600;margin:18px 0 8px}
+p{margin:0 0 10px}
+.wrap{max-width:1240px;margin:0 auto}
+.band{padding:clamp(24px,3.5vw,48px) max(5vw,16px)}
+.top{background:var(--band);color:var(--onb)}
+.top .wrap{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 32px;align-items:end}
+.top p{margin:8px 0 0;max-width:60ch;opacity:.92}
+.ctl{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.ctl label{display:grid;gap:4px;font-size:14px;font-weight:600}
+input,select,button,textarea{font:inherit;font-size:16px;color:inherit}
+input[type=text],select,textarea{background:var(--bg);color:var(--ink);border:1.5px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px}
+.top input[type=text],.top select{border-color:transparent}
+button{min-height:44px;min-width:44px;padding:0 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;font-weight:600}
+button:hover{border-color:var(--tq)}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:default}
+.top button{background:var(--onb);color:#5a2210;border-color:transparent}
+:focus-visible{outline:3px solid var(--tq);outline-offset:2px}
+.top :focus-visible{outline-color:var(--onb)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:28px;align-items:start}
+.pan{background:var(--pan);border:1px solid var(--line);border-radius:12px;padding:18px}
+.mut{color:var(--mut);font-size:14px}
+.sp{display:grid;grid-template-columns:3.2em minmax(0,1fr) 44px 2.2em 44px;gap:6px 10px;align-items:center;padding:4px 0;border-bottom:1px solid var(--line)}
+.sp:last-of-type{border-bottom:0}
+.sp b{font-family:"Big Shoulders Display",Impact,sans-serif;font-size:22px}
+.sp .v{font-family:"Big Shoulders Display",Impact,sans-serif;font-size:28px;font-weight:800;text-align:center}
+.pool{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 8px}
+.pool .num{font-size:34px;font-weight:800;color:var(--tq)}
+.pool .num.over{color:var(--bad)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:40px;padding:6px 12px;border-radius:20px;font-weight:600;font-size:15px}
+.chip[aria-pressed=true]{background:var(--tq);border-color:var(--tq);color:var(--bg)}
+.trait{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.trait input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--tq);grid-row:span 2}
+.trait span{font-weight:700}
+.trait small{color:var(--mut);font-size:14px}
+.trait.off{opacity:.45;cursor:default}
+.snap{position:sticky;top:12px}
+.snaphead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px}
+.lvl{display:flex;align-items:center;gap:12px;flex:1 1 260px}
+.lvl .num{font-size:44px;font-weight:800;min-width:2.2ch;text-align:right}
+input[type=range]{flex:1;accent-color:var(--tq);height:44px}
+.cols{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;height:150px;align-items:end;margin:10px 0 4px}
+.col{display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center}
+.col i{display:block;background:var(--band);border-radius:6px 6px 0 0;transition:height .35s ease}
+.col i.up{background:var(--tq)}
+.col .num{font-size:26px;font-weight:800}
+.col small{font-size:13px;font-weight:700;color:var(--mut);border-top:2px solid var(--ink);padding-top:3px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(7.5em,1fr));gap:8px;margin:14px 0}
+.fig{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.fig .num{font-size:30px;font-weight:800;white-space:nowrap}
+.fig small{display:block;font-size:13px;color:var(--mut)}
+.bars{display:grid;gap:5px}
+.bar{display:grid;grid-template-columns:8.5em minmax(0,1fr) 2.4em;gap:10px;align-items:center;font-size:15px}
+.bar .t{height:16px;background:var(--bg);border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--tq);transition:width .35s ease}
+.bar.tag span:first-child{font-weight:700}
+.bar.tag span:first-child::after{content:" tag";font-size:12px;color:var(--tq);font-weight:700}
+.bar .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+.taken{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.taken span{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:14px}
+.taken em{font-style:normal;color:var(--mut)}
+.plan{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(0,1.3fr);gap:28px;align-items:start}
+.levels{display:grid;gap:4px;max-height:720px;overflow-y:auto;padding-right:4px}
+.lrow{display:grid;grid-template-columns:2.6em minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left;font-weight:400;padding:6px 10px}
+.lrow .num{font-size:24px;font-weight:800}
+.lrow[aria-current=true]{border-color:var(--tq);background:var(--tqs)}
+.lrow .pk{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .st{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.flag{display:inline-block;background:var(--warn);color:#2a1d00;border-radius:4px;padding:0 6px;font-size:13px;font-weight:700}
+.bad{color:var(--bad);font-weight:700}
+.ed table{width:100%;border-collapse:collapse}
+.ed td,.ed th{padding:4px 6px;border-bottom:1px solid var(--line);text-align:left}
+.ed th{font-size:13px;color:var(--mut);font-weight:600}
+.ed td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ed td.b{white-space:nowrap;text-align:right}
+.ed td.b button{min-width:44px;padding:0 8px}
+.ed .pts{font-weight:700;color:var(--tq)}
+.edhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.edhead .num{font-size:40px;font-weight:800}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.row label{display:grid;gap:4px;font-weight:600;font-size:14px;flex:1 1 240px}
+.why{font-size:14px;margin:6px 0 0}
+.idx{border-collapse:collapse;width:100%}
+.idx th,.idx td{text-align:left;padding:8px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.idx th{font-size:13px;color:var(--mut)}
+.idx td:first-child{font-family:"Big Shoulders Display",Impact,sans-serif;font-size:22px;font-weight:800;white-space:nowrap}
+.idx .ok td:nth-child(2){color:var(--tq);font-weight:700}
+.dl{font-size:12px;font-weight:700;color:var(--mut);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px;white-space:nowrap}
+.scroll{overflow-x:auto}
+.toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+.toolbar input[type=text]{flex:1 1 220px}
+.toolbar label.ck{display:flex;gap:8px;align-items:center;min-height:44px}
+.ck input{width:20px;height:20px;accent-color:var(--tq)}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size:14px}
+.foot{background:var(--pan);border-top:1px solid var(--line)}
+.foot .wrap{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;font-size:15px}
+.foot ul{margin:0;padding-left:18px}
+.note{font-size:14px;color:var(--mut);margin-top:8px}
+.ic{width:20px;height:20px;flex:none;vertical-align:-4px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.ic .f{fill:currentColor;stroke:none}
+.skic{color:var(--tq);margin-right:8px}
+.med{display:inline-grid;place-items:center;width:34px;height:34px;flex:none;border-radius:50%;background:var(--band);color:var(--onb);box-shadow:inset 0 -3px 0 rgba(0,0,0,.22),inset 0 2px 0 rgba(255,255,255,.25);vertical-align:middle}
+.med .ic{width:20px;height:20px;vertical-align:0}
+.med.big{width:64px;height:64px}
+.med.big .ic{width:36px;height:36px;stroke-width:1.7}
+.med.sm{width:24px;height:24px}
+.med.sm .ic{width:15px;height:15px;stroke-width:2.2}
+.bar{grid-template-columns:10.5em minmax(0,1fr) 2.4em}
+.bar>span:first-child{display:flex;align-items:center;white-space:nowrap}
+.chip .ic{margin-right:6px}
+.lrow .pk{display:flex;align-items:center;gap:8px}
+.taken span{display:inline-flex;align-items:center;gap:6px}
+.pcard{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;background:var(--pan);border-radius:10px;padding:12px;margin-top:8px}
+.pcard p{margin:0}
+.pnw{display:flex;align-items:center;gap:10px}
+@media(max-width:900px){.grid2,.plan{grid-template-columns:minmax(0,1fr)}.snap{position:static}.levels{max-height:340px}}
+@media(max-width:600px){.top .wrap{grid-template-columns:minmax(0,1fr)}.cols{height:120px}.bar{grid-template-columns:9.2em minmax(0,1fr) 2.2em;font-size:14px}.idx thead{display:none}.idx tr{display:grid;grid-template-columns:auto minmax(0,1fr);padding:8px 0;border-bottom:1px solid var(--line)}.idx td{border:0;padding:2px 6px}.idx td:nth-child(3),.idx td:nth-child(4){grid-column:1/-1}.ed td.b button{min-width:40px;padding:0 4px}}
+@media(prefers-reduced-motion:reduce){.col i,.bar .t i{transition:none}}
+</style>
+</head>
+<body>
+<header class="band top">
+ <div class="wrap">
+  <div>
+   <h1>Mojave build planner</h1>
+   <p>Set your SPECIAL, traits and tags, then plan skill points and a perk for every level up to the cap. Every change re-checks the whole plan.</p>
+  </div>
+  <div class="ctl">
+   <label>Build name<input type="text" id="bname" maxlength="60"></label>
+   <label>Level cap<select id="cap"><option value="30">30, base game</option><option value="35">35, one DLC</option><option value="40">40, two DLC</option><option value="45">45, three DLC</option><option value="50">50, all four</option></select></label>
+   <label class="ck" style="display:flex;grid-auto-flow:column;gap:8px;align-items:center;min-height:44px"><input type="checkbox" id="dlc"> DLC perks and traits</label>
+  </div>
+ </div>
+</header>
+
+<main>
+<section class="band">
+ <div class="wrap grid2">
+  <div>
+   <h2>Character creation</h2>
+   <p class="mut">40 points across seven stats, each from 1 to 10.</p>
+   <div class="pan">
+    <div class="pool"><strong>Points left</strong><span class="num" id="pool">0</span></div>
+    <div id="special"></div>
+   </div>
+   <h3>Traits <span class="mut" id="tcount"></span></h3>
+   <div id="traits"></div>
+   <h3>Tag skills <span class="mut" id="tagcount"></span></h3>
+   <p class="mut">Pick three. Each gets +15.</p>
+   <div class="chips" id="tags"></div>
+   <div id="tag4wrap"></div>
+   <h3>Implants</h3>
+   <p class="mut">+1 each from the clinic in New Vegas, 4,000 caps apiece. You can have as many as your Endurance.</p>
+   <div class="chips" id="imps"></div>
+   <div class="row"><label>Bought by level<select id="implv"></select></label><span id="impnote" class="mut"></span></div>
+  </div>
+
+  <aside class="pan snap" aria-label="Character at chosen level">
+   <div class="snaphead">
+    <h2 id="snapname">Snapshot</h2>
+    <div class="lvl"><span class="mut">Level</span><input type="range" id="view" min="1" max="50" aria-label="Show character at level"><span class="num" id="viewn">1</span></div>
+   </div>
+   <div class="cols" id="cols"></div>
+   <div class="figs" id="figs"></div>
+   <div class="bars" id="bars"></div>
+   <div class="taken" id="taken"></div>
+   <p class="note">Turquoise columns are stats raised since creation. Skills stop counting at 100.</p>
+  </aside>
+ </div>
+</section>
+
+<section class="band" style="background:var(--pan);border-block:1px solid var(--line)">
+ <div class="wrap">
+  <div class="edhead"><h2>Level by level</h2>
+   <div class="toolbar"><button id="undo">Undo</button><button id="copy">Copy build code</button><button id="reset">Start blank</button></div>
+  </div>
+  <p class="mut">You get skill points every level and a perk every second level. Pick a level on the left to spend them.</p>
+  <div class="plan">
+   <div class="levels" id="levels" role="list"></div>
+   <div class="pan ed" id="editor" style="background:var(--bg)"></div>
+  </div>
+  <details id="io"><summary>Load a build code</summary>
+   <textarea id="code" aria-label="Build code" placeholder="Paste a code copied from this page"></textarea>
+   <div class="row"><button id="load">Load build</button><span id="iomsg" class="mut"></span></div>
+  </details>
+ </div>
+</section>
+
+<section class="band">
+ <div class="wrap">
+  <h2>Perk index</h2>
+  <div class="toolbar">
+   <input type="text" id="q" placeholder="Search perks or effects" aria-label="Search perks">
+   <label class="ck"><input type="checkbox" id="okonly"> Only ones I qualify for at the snapshot level</label>
+  </div>
+  <div class="scroll"><table class="idx"><thead><tr><th>Level</th><th>Perk</th><th>Needs</th><th>Effect</th></tr></thead><tbody id="idx"></tbody></table></div>
+ </div>
+</section>
+</main>
+
+<footer class="band foot">
+ <div class="wrap">
+  <div><h3>How the numbers work</h3><ul>
+   <li>Starting skill: 2 + 2 × governing stat + half of Luck, rounded up. Tagged: +15.</li>
+   <li>Skill points per level: 10 + half of Intelligence, rounded down, +2 with Educated.</li>
+   <li>Hit points: 95 + 20 × Endurance + 5 × level. Action points: 65 + 3 × Agility.</li>
+   <li>Carry weight: 150 + 10 × Strength. Crit chance: Luck as a percent.</li>
+  </ul></div>
+  <div><h3>What it assumes</h3><ul>
+   <li>Skills are spent before the perk at the same level, as in the game, so this level's points count toward this level's perk.</li>
+   <li>Four Eyes assumes you wear glasses. Time of day, health and indoor traits are left out of the numbers.</li>
+   <li>Skill books and magazines are not counted. Leave headroom if you plan on reading.</li>
+  </ul></div>
+  <div><h3>Sources</h3><p class="mut">Perk and trait data compiled from the StrategyWiki, Gamer Guides and GameBanshee perk lists. Fan-made, not affiliated with the game's makers. Your plan is saved in this browser only; copy the build code to keep it elsewhere.</p></div>
+ </div>
+</footer>
+
+<script>
+{
+const STA=['STR','PER','END','CHA','INT','AGI','LCK'];
+const STN=['Strength','Perception','Endurance','Charisma','Intelligence','Agility','Luck'];
+const SK=[['Bar','Barter',3],['EW','Energy Weapons',1],['Exp','Explosives',1],['Gun','Guns',5],['Lck','Lockpick',1],['Med','Medicine',4],['Mel','Melee Weapons',0],['Rep','Repair',4],['Sci','Science',4],['Snk','Sneak',5],['Spc','Speech',3],['Sur','Survival',2],['Una','Unarmed',2]];
+const SKN=Object.fromEntries(SK.map(s=>[s[0],s[1]]));
+const TR=[
+['Built to Destroy','+3% crit chance, but weapons wear 15% faster.'],
+['Fast Shot','Guns and energy weapons fire 20% faster, but spread is wider and V.A.T.S. accuracy drops 20%.'],
+['Four Eyes','+2 Perception while wearing glasses, -1 without. Counted here as +1.'],
+['Good Natured','+5 Barter, Medicine, Repair, Science and Speech; -5 to the five combat skills.'],
+['Heavy Handed','Melee and unarmed hit 20% harder, but crits do far less.'],
+['Kamikaze','+10 action points, but -2 DT and -15% DR.'],
+['Loose Cannon','Throw and place explosives 30% faster, 25% less range.'],
+['Small Frame','+1 Agility, but your limbs cripple more easily.'],
+['Trigger Discipline','Guns and energy weapons 20% more accurate, but fire 20% slower.'],
+['Wild Wasteland','Strange and silly encounters around the wasteland.'],
+['Claustrophobia','+1 to all SPECIAL outdoors, -1 indoors.',1],
+['Early Bird','+2 to all SPECIAL from 6 to noon, -1 from 6pm to 6am.',1],
+['Hoarder','+25 carry weight, but -1 to stats while carrying under 160 lbs.',1],
+['Hot Blooded','+15% damage below half health, but -2 Perception and Agility then.',1],
+["Logan's Loophole",'Chems last twice as long and never addict, but the level cap is 30.',1],
+['Skilled','+5 to every skill, but 10% less XP.',1]];
+// [level, name, ranks, needs, effect, dlc]
+const PK=[
+[2,'Lady Killer / Black Widow',1,'','+10% damage against the opposite sex, extra dialogue.'],
+[2,'Confirmed Bachelor / Cherchez la Femme',1,'','+10% damage against the same sex, extra dialogue.'],
+[2,'Friend of the Night',1,'P6,Snk30','Night vision in the dark.'],
+[2,'Heave, Ho!',1,'S5,Exp30','Thrown weapons fly 50% faster and further.'],
+[2,'Hunter',1,'Sur30','+75% crit damage against animals.'],
+[2,'Intense Training',10,'','+1 to a SPECIAL stat of your choice.'],
+[2,'Rapid Reload',1,'A5,Gun30','Reload 25% faster.'],
+[2,'Retention',1,'I5','Skill magazines last three minutes.'],
+[2,'Swift Learner',3,'I4','+10% XP per rank.'],
+[2,'In Shining Armor',1,'Rep20,Sci70','+5 DT against energy in metal armor.',1],
+[2,'Junk Rounds',1,'L6,Rep45','Craft ammo from scrap metal and tin cans.',1],
+[2,'Light Touch',1,'A6,Rep45','+5% crit chance in light armor, enemies crit you less.',1],
+[2,'Old World Gourmet',1,'E6,Sur45','Snacks heal more, less addiction.',1],
+[4,'Cannibal',1,'','Eat corpses while sneaking to heal, costs karma.'],
+[4,'Comprehension',1,'I4','Magazines give double, books give one extra point.'],
+[4,'Educated',1,'I4','+2 skill points every level after this one.'],
+[4,'Entomologist',1,'I4,Sur45','+50% damage against mutated insects.'],
+[4,'Rad Child',1,'Sur70','Regenerate health while irradiated.'],
+[4,"Run 'n Gun",1,'Gun45|EW45','Better one-handed accuracy while moving.'],
+[4,'Travel Light',1,'Sur45','Run 10% faster in light or no armor.'],
+[6,'Bloody Mess',1,'','+5% damage with everything, messier deaths.'],
+[6,'Demolition Expert',3,'Exp50','+20% explosive damage per rank.'],
+[6,'Ferocious Loyalty',1,'C6','Companions get +50 DR when you are below half health.'],
+[6,'Fortune Finder',1,'L5','More caps in containers.'],
+[6,'Gunslinger',1,'','+25% V.A.T.S. accuracy with one-handed weapons.'],
+[6,'Hand Loader',1,'Rep70','Hand-load ammo recipes, keep more casings.'],
+[6,'Lead Belly',1,'E5|Sur40','Half the radiation from food and water.'],
+[6,'Mad Bomber',1,'Exp45,Rep45','Special explosive recipes.',1],
+[6,'Shotgun Surgeon',1,'Gun45','Shotguns ignore 10 more DT.'],
+[6,'The Professional',1,'Snk70','+20% sneak crit damage with pistols, revolvers and SMGs.'],
+[6,'Toughness',2,'E5','+3 DT per rank.'],
+[6,'Vigilant Recycler',1,'Sci70','Recover more energy ammo, better recycling.',1],
+[8,'Commando',1,'','+25% V.A.T.S. accuracy with two-handed weapons.'],
+[8,'Cowboy',1,'Gun45,Mel45','+25% damage with revolvers, lever guns, knives, hatchets, dynamite.'],
+[8,'Grunt',1,'Gun45,Exp20','+25% damage with standard military guns and grenades.',1],
+[8,'Home on the Range',1,'Sur70','Sleep at any campfire.',1],
+[8,'Living Anatomy',1,'Med70','See target health and DT, +5% damage to humans.'],
+[8,'Pack Rat',1,'I5,Bar70','Items of 2 lbs or less weigh half.'],
+[8,'Quick Draw',1,'A5','Draw and holster 50% faster.'],
+[8,'Rad Resistance',1,'E5,Sur40','+25% radiation resistance.'],
+[8,'Scrounger',1,'L5','More ammo in containers.'],
+[8,'Sneering Imperialist',1,'','+15% damage and accuracy against raiders and tribals.',1],
+[8,'Stonewall',1,'S6,E6','+5 DT against melee, cannot be knocked down.'],
+[8,'Strong Back',1,'S5,E5','+50 carry weight.'],
+[8,'Super Slam!',1,'S6,Mel45','Melee and unarmed attacks can knock down.'],
+[8,'Terrifying Presence',1,'Spc70','Scare enemies off in some conversations.'],
+[8,'Tribal Wisdom',1,'Sur70','Less animal limb damage, poison resistance.',1],
+[10,'And Stay Back',1,'Gun70','Shotgun hits can knock enemies back.',1],
+[10,'Animal Friend',2,'C6,Sur45','Animals leave you alone, then fight for you.'],
+[10,'Fight the Power!',1,'','+2 DT and +5% crit against faction soldiers.',1],
+[10,'Finesse',1,'','+5% crit chance.'],
+[10,'Here and Now',1,'','Gain a level instantly.'],
+[10,'Math Wrath',1,'Sci70','-10% V.A.T.S. AP costs.',1],
+[10,'Miss Fortune',1,'L6','Occasional V.A.T.S. helper who cripples and knocks down.',1],
+[10,'Mister Sandman',1,'Snk60','Kill sleeping people silently for bonus XP.'],
+[10,'Mysterious Stranger',1,'L6','Occasional V.A.T.S. helper who finishes targets.'],
+[10,'Nerd Rage!',1,'I5,Sci50','Below 20% health: Strength 10 and +15 DT.'],
+[10,'Night Person',1,'','+2 Intelligence and Perception at night.'],
+[10,'Plasma Spaz',1,'EW70','Plasma weapons cost less AP.'],
+[12,'Alertness',1,'P6','+2 Perception while crouched and still.',1],
+[12,'Fast Metabolism',1,'','Stimpaks heal 20% more.'],
+[12,'Ghastly Scavenger',1,'@Cannibal','Eat super mutants and ghouls too.'],
+[12,'Heavyweight',1,'S7','Weapons over 10 lbs weigh half.',1],
+[12,'Hit the Deck',1,'Exp70','+50% DT against explosives.'],
+[12,'Hobbler',1,'P7','Better V.A.T.S. odds on legs.',1],
+[12,'Life Giver',1,'E6','+30 hit points.'],
+[12,'Long Haul',1,'E6,Bar70','Fast travel while overloaded.'],
+[12,'Piercing Strike',1,'Una70','Melee and unarmed ignore 15 DT.'],
+[12,'Pyromaniac',1,'Exp60','+50% fire damage.'],
+[12,'Robotics Expert',1,'Sci50','+25% damage to robots, switch them off by sneaking.'],
+[12,'Silent Running',1,'A6,Snk50','Running does not hurt sneaking.'],
+[12,'Sniper',1,'P6,A6','Better V.A.T.S. odds on heads.'],
+[12,'Splash Damage',1,'Exp70','Explosions 25% wider.'],
+[12,'Unstoppable Force',1,'S7,Mel90','Four times damage through blocks.'],
+[14,'Adamantium Skeleton',1,'','Limbs take half damage.'],
+[14,'Center of Mass',1,'Gun70','+15% V.A.T.S. damage to the torso.'],
+[14,'Chemist',1,'Med60','Chems last twice as long.'],
+[14,'Jury Rigging',1,'Rep90','Repair with any similar item.'],
+[14,'Light Step',1,'P6,A6','Floor traps and mines never trigger.'],
+[14,'Purifier',1,'','+50% melee damage to mutated creatures.'],
+[16,'Action Boy / Action Girl',2,'A6','+15 action points per rank.'],
+[16,'Better Criticals',1,'P6,L6','+50% crit damage.'],
+[16,'Chem Resistant',1,'Med60','Half as likely to get addicted.'],
+[16,'Meltdown',1,'EW90','Energy kills explode.'],
+[16,'Tag!',1,'','A fourth tag skill, +15 to it.'],
+[16,'Weapon Handling',1,'S<10','Weapon Strength needs 2 lower.'],
+[18,'Computer Whiz',1,'I7,Sci70','Retry a terminal you were locked out of.'],
+[18,'Concentrated Fire',1,'EW60,Gun60','V.A.T.S. accuracy grows on repeated body-part hits.'],
+[18,'Infiltrator',1,'P7,Lck70','Retry a broken lock once.'],
+[18,'Paralyzing Palm',1,'Una70','V.A.T.S. palm strikes can paralyze.'],
+[18,'Walker Instinct',1,'Sur50','+1 Perception and Agility outdoors.',1],
+[20,'Atomic!',1,'E6','Faster and stronger while irradiated.',1],
+[20,'Explorer',1,'','Every location appears on your map.'],
+[20,'Eye for Eye',1,'','+10% damage per crippled limb you have.',1],
+[20,"Grim Reaper's Sprint",1,'','V.A.T.S. kills restore 20 AP.'],
+[20,'Mile in Their Shoes',1,'Sur25','A certain cactus drink grants Perception and Sneak.',1],
+[20,'Ninja',1,'Mel80,Snk80','+15% melee crit chance, +25% sneak crit damage.'],
+[20,'Solar Powered',1,'E7','+2 Strength and slow healing in sunlight.'],
+[20,"Them's Good Eatin'",1,'Sur55','Creatures drop rare healing food.',1],
+[22,'Irradiated Beauty',1,'E8','Sleeping clears radiation.',1],
+[22,'Laser Commander',1,'EW90','+15% laser damage and +10% laser crit chance.'],
+[22,'Nuka Chemist',1,'Sci90','Special cola recipes.'],
+[22,'Spray and Pray',1,'','Your attacks barely hurt companions.'],
+[22,'Voracious Reader',1,'I7','Turn damaged books into blank magazines.',1],
+[24,'Slayer',1,'A7,Una90','Melee and unarmed attacks 30% faster.'],
+[26,'Lessons Learned',1,'I6','+1% XP per level you have.',1],
+[26,'Nerves of Steel',1,'A7','AP regenerates 20% faster.'],
+[26,'Tunnel Runner',1,'A8','Much faster sneaking in light armor.',1],
+[28,'Rad Absorption',1,'E7','Radiation slowly fades.'],
+[28,"Roughin' It",1,'Sur100','Sleeping outdoors counts as well rested.',1],
+[30,'Implant GRX',2,'E8','A built-in, non-addictive speed injector.',1],
+[36,'Broad Daylight',1,'','No sneak penalty from your wrist light.',1],
+[40,'Certified Tech',1,'','+25% crit chance against robots, more parts.',1],
+[50,"Ain't Like That Now",1,'','Evil karma only. Resets karma, faster AP and attacks.',1],
+[50,"Just Lucky I'm Alive",1,'','Neutral karma only. +50% crit damage, luck after close calls.',1],
+[50,'Thought You Died',1,'','Good karma only. Resets karma, +10% damage, more health.',1]];
+const PKN=Object.fromEntries(PK.map(p=>[p[1],p]));
+const G={
+gun:'<path d="M3 8h15l2-2h1v5h-5l-1 1h-4l-1.5 5H6l1.5-5H3z"/><path d="M11 12v2"/>',
+rifle:'<path d="M2 10h16l1-1h3v3h-7l-2 1H9l-3 5H3l2-5H2z"/><path d="M8 10V8h4v2"/>',
+crosshair:'<circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="1.5" class="f"/><path d="M12 2v5M12 17v5M2 12h5M17 12h5"/>',
+fist:'<path d="M7 11V8a1.8 1.8 0 0 1 3.6 0v2M10.6 10V7a1.8 1.8 0 0 1 3.6 0v3M14.2 10V8a1.8 1.8 0 0 1 3.6 0v6a6 6 0 0 1-6 6h-1A5 5 0 0 1 5.5 15v-1.5A2.5 2.5 0 0 1 8 11h3a2 2 0 0 1 0 4H9"/>',
+blade:'<path d="M20 3l-9.5 9.5 1.5 1.5L21 5V3z"/><path d="M8 12l4 4M10 14l-6 6M3.5 18.5l2 2"/>',
+bomb:'<circle cx="10" cy="14" r="6.5"/><path d="M14.5 9.5l2-2M16.5 7.5c1-1 2-.5 2.5-2M20 3l1-1M21.5 5h1"/><path d="M7.5 12a3 3 0 0 1 2-1.8"/>',
+flask:'<path d="M9 3h6M10 3v6l-5.2 9.1A2 2 0 0 0 6.5 21h11a2 2 0 0 0 1.7-2.9L14 9V3"/><path d="M7.2 15h9.6"/>',
+heart:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
+shield:'<path d="M12 3l7.5 3v6c0 4.6-3.2 7.7-7.5 9-4.3-1.3-7.5-4.4-7.5-9V6z"/><path d="M12 3v18"/>',
+rad:'<circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="1.6" class="f"/><path class="f" d="M12 10.2L8.3 4a8 8 0 0 1 7.4 0zM13.6 12.9l7.1.1a8 8 0 0 1-3.7 6.4zM10.4 12.9L7 19.4A8 8 0 0 1 3.3 13z"/>',
+book:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5M8.5 7.5h7M8.5 11h5"/>',
+bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.8 10.7c.6.5.8 1.3.8 2.3h6c0-1 .2-1.8.8-2.3A6 6 0 0 0 12 3z"/><path d="M12 7v4l2 1"/>',
+coin:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><path d="M12 9v6M10 13.5c0 .8.9 1.3 2 1.3s2-.5 2-1.3-.9-1.2-2-1.5-2-.7-2-1.5.9-1.3 2-1.3 2 .5 2 1.3"/>',
+speech:'<path d="M4 4.5h16v11H10l-5.5 4.5v-4.5H4z"/><path d="M8 9h8M8 12h5"/>',
+eye:'<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="1" class="f"/>',
+moon:'<path d="M20 14.6A8.3 8.3 0 1 1 9.4 4a6.6 6.6 0 0 0 10.6 10.6z"/><path d="M17 3.5v3M15.5 5h3"/>',
+sun:'<circle cx="12" cy="12" r="4.2"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"/>',
+paw:'<ellipse cx="12" cy="16" rx="4.5" ry="3.8"/><circle cx="6" cy="10.5" r="1.8"/><circle cx="9.5" cy="6.5" r="1.8"/><circle cx="14.5" cy="6.5" r="1.8"/><circle cx="18" cy="10.5" r="1.8"/>',
+bug:'<ellipse cx="12" cy="14" rx="4.5" ry="6"/><circle cx="12" cy="6" r="2.5"/><path d="M12 8v12M7.5 11L3 9M7.5 15H3M8 18l-3.5 2.5M16.5 11L21 9M16.5 15H21M16 18l3.5 2.5M10.5 4L9 2M13.5 4L15 2"/>',
+wrench:'<path d="M14.7 6.3a4.2 4.2 0 0 0-5.6 5.6L3 18l3 3 6.1-6.1a4.2 4.2 0 0 0 5.6-5.6l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+lock:'<rect x="4.5" y="10.5" width="15" height="10.5" rx="2"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/><circle cx="12" cy="15" r="1.5" class="f"/><path d="M12 15v3"/>',
+pack:'<path d="M6 9a3.5 3.5 0 0 1 3.5-3.5h5A3.5 3.5 0 0 1 18 9v11.5H6z"/><path d="M9.5 5.5V3h5v2.5M9 13h6v4H9z"/>',
+boot:'<path d="M7 3h5v8l7 3a2 2 0 0 1 1.5 2v2.5H4V15l3-2z"/><path d="M4 21h16.5M12 7h-2.5M12 10H9"/>',
+clover:'<circle cx="9" cy="9" r="3.3"/><circle cx="15" cy="9" r="3.3"/><circle cx="9" cy="15" r="3.3"/><circle cx="15" cy="15" r="3.3"/><path d="M15 15l5 6"/>',
+star:'<path d="M12 2.8l2.8 5.8 6.3.9-4.6 4.5 1.1 6.3L12 17.3l-5.6 3 1.1-6.3-4.6-4.5 6.3-.9z"/>',
+skull:'<path d="M12 3a8 8 0 0 0-8 8c0 2.9 1.4 4.6 3 5.6V20h10v-3.4c1.6-1 3-2.7 3-5.6a8 8 0 0 0-8-8z"/><circle cx="9" cy="11.5" r="1.8" class="f"/><circle cx="15" cy="11.5" r="1.8" class="f"/><path d="M10.5 20v-2.5M13.5 20v-2.5M12 14l-1 2h2z"/>',
+bolt:'<path d="M13.5 2L4.5 13.5h6.5l-1 8.5 9-11.5h-6.5z"/>',
+fire:'<path d="M12 2.5c.8 4 6.5 6 6.5 11.5a6.5 6.5 0 0 1-13 0c0-3.2 1.8-4.6 2.3-7.3 1.8 1 2.7 3 2.7 3s1.6-3.3 1.5-7.2z"/><path d="M12 20.5a2.8 2.8 0 0 1-2.8-2.8c0-2 2.8-3.7 2.8-3.7s2.8 1.7 2.8 3.7a2.8 2.8 0 0 1-2.8 2.8z"/>',
+robot:'<rect x="4.5" y="7.5" width="15" height="11" rx="2.5"/><path d="M12 7.5V4M2 12v3M22 12v3M9 15h6"/><circle cx="12" cy="3.3" r="1.2" class="f"/><circle cx="9" cy="11.5" r="1.5" class="f"/><circle cx="15" cy="11.5" r="1.5" class="f"/>',
+map:'<path d="M3 6.5l6-3 6 3 6-3v14l-6 3-6-3-6 3z"/><path d="M9 3.5v14M15 6.5v14"/>',
+dumbbell:'<path d="M6.5 12h11M3 9.5v5M6 7v10M18 7v10M21 9.5v5"/>',
+leaf:'<path d="M5 19C5 10 11 4.5 20.5 4.5 20.5 14 15 19.5 6 19.5z"/><path d="M3 21l9.5-9.5"/>',
+cross:'<path d="M9 3.5h6v5.5h5.5v6H15v5.5H9V15H3.5V9H9z"/>',
+atom:'<circle cx="12" cy="12" r="1.7" class="f"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="9.5" ry="3.8" transform="rotate(120 12 12)"/>',
+clock:'<circle cx="12" cy="13" r="8"/><path d="M12 8.5V13l3 2M9.5 2.5h5M12 2.5V5"/>',
+arrow:'<path d="M12 3l7 7.5h-4.3V21H9.3V10.5H5z"/>',
+tag:'<path d="M3 11.5V4h7.5l10 10-7.5 7.5z"/><circle cx="7.5" cy="8" r="1.6" class="f"/>',
+people:'<circle cx="8.5" cy="8" r="3.3"/><circle cx="16.5" cy="9" r="2.7"/><path d="M2.5 20a6 6 0 0 1 12 0M14.5 14.3a5 5 0 0 1 7 4.7"/>',
+food:'<path d="M6 3v7a2.3 2.3 0 0 0 4.6 0V3M8.3 12.3V21M8.3 3v5M16.5 21v-7.5c-1.8 0-3-1.6-3-5S14.7 3 16.5 3c0 0 0 0 0 0V21"/>',
+mask:'<path d="M2.5 8.5c3.5-2.2 15.5-2.2 19 0 0 5.5-2.6 8-5.2 8-2 0-3-2.2-4.3-2.2S9.7 16.5 7.7 16.5c-2.6 0-5.2-2.5-5.2-8z"/><path d="M6 10.5l3.5 1M18 10.5l-3.5 1"/>',
+karma:'<circle cx="12" cy="12" r="9.5"/><path d="M12 2.5a4.75 4.75 0 0 1 0 9.5 4.75 4.75 0 0 0 0 9.5" /><circle cx="12" cy="7.2" r="1.3" class="f"/><circle cx="12" cy="16.8" r="1.3"/>'};
+const SKG={Bar:'coin',EW:'bolt',Exp:'bomb',Gun:'gun',Lck:'lock',Med:'cross',Mel:'blade',Rep:'wrench',Sci:'atom',Snk:'mask',Spc:'speech',Sur:'leaf',Una:'fist'};
+const PG={};
+`heart:Lady Killer / Black Widow|Confirmed Bachelor / Cherchez la Femme|Fast Metabolism|Life Giver
+moon:Friend of the Night|Mister Sandman|Night Person
+bomb:Heave, Ho!|Demolition Expert|Mad Bomber|Splash Damage
+paw:Hunter|Animal Friend
+dumbbell:Intense Training|Heavyweight|Weapon Handling
+gun:Rapid Reload|Cowboy|Quick Draw
+book:Retention|Comprehension|Voracious Reader
+arrow:Swift Learner|Here and Now|Lessons Learned
+shield:In Shining Armor|Toughness|Stonewall|Hit the Deck|Adamantium Skeleton
+wrench:Junk Rounds|Hand Loader|Jury Rigging
+star:Light Touch|Finesse|Better Criticals
+food:Old World Gourmet|Lead Belly|Them's Good Eatin'
+skull:Cannibal|Bloody Mess|Ghastly Scavenger|Grim Reaper's Sprint
+bulb:Educated|Nerd Rage!
+bug:Entomologist
+rad:Rad Child|Rad Resistance|Atomic!|Irradiated Beauty|Rad Absorption
+boot:Run 'n Gun|Travel Light|Silent Running|Light Step|Mile in Their Shoes
+people:Ferocious Loyalty|Spray and Pray
+coin:Fortune Finder
+crosshair:Gunslinger|Sneering Imperialist|Hobbler|Sniper|Center of Mass|Concentrated Fire
+rifle:Shotgun Surgeon|Commando|Grunt|And Stay Back
+mask:The Professional|Ninja|Tunnel Runner
+bolt:Vigilant Recycler|Plasma Spaz|Meltdown|Laser Commander
+fire:Home on the Range|Pyromaniac|Roughin' It
+eye:Living Anatomy|Alertness|Eye for Eye
+pack:Pack Rat|Scrounger|Strong Back
+speech:Terrifying Presence
+leaf:Tribal Wisdom|Walker Instinct
+fist:Fight the Power!|Super Slam!|Piercing Strike|Paralyzing Palm
+atom:Math Wrath|Computer Whiz
+clover:Miss Fortune|Mysterious Stranger
+map:Long Haul|Explorer
+blade:Unstoppable Force|Purifier|Slayer
+flask:Chemist|Chem Resistant|Nuka Chemist
+clock:Action Boy / Action Girl|Nerves of Steel|Implant GRX
+tag:Tag!
+lock:Infiltrator
+sun:Solar Powered|Broad Daylight
+robot:Robotics Expert|Certified Tech
+karma:Ain't Like That Now|Just Lucky I'm Alive|Thought You Died`.split('\n').forEach(l=>{const [g,ns]=[l.slice(0,l.indexOf(':')),l.slice(l.indexOf(':')+1)];ns.split('|').forEach(n=>PG[n]=g);});
+document.body.insertAdjacentHTML('afterbegin','<svg width="0" height="0" style="position:absolute" aria-hidden="true">'+Object.entries(G).map(([k,v])=>`<symbol id="g-${k}" viewBox="0 0 24 24">${v}</symbol>`).join('')+'</svg>');
+const ic=(g,c='')=>`<svg class="ic ${c}" aria-hidden="true"><use href="#g-${g}"/></svg>`;
+const pic=(n,sz='')=>`<span class="med ${sz}">${ic(PG[n]||'star')}</span>`;
+const sic=k=>ic(SKG[k],'skic');
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const KEY='mojave-planner-v1';
+
+function blank(){return {name:'New courier',sp:[5,5,5,5,5,5,5],traits:[],tags:[],tag4:'',cap:50,dlc:true,imp:[0,0,0,0,0,0,0],impLv:10,lv:{},view:1,sel:2};}
+const L=lv=>S.lv[lv]||(S.lv[lv]={sk:{},perk:'',it:6});
+
+function capOf(){return S.traits.includes("Logan's Loophole")?30:(S.dlc?S.cap:30);}
+function picks(name,lv,incl){let n=0;for(let i=2;i<=lv;i++){if(i===lv&&!incl)break;if(S.lv[i]&&S.lv[i].perk===name)n++;}return n;}
+function stats(lv,incl){
+ const s=S.sp.slice();
+ if(S.traits.includes('Small Frame'))s[5]++;
+ if(S.traits.includes('Four Eyes'))s[1]++;
+ for(let i=2;i<=lv;i++){if(i===lv&&!incl)break;const d=S.lv[i];if(d&&d.perk==='Intense Training')s[d.it]++;}
+ if(S.impLv<=lv)S.imp.forEach((v,i)=>s[i]+=v);
+ return s.map(v=>Math.min(10,v));
+}
+function skills(lv,incl){
+ const s=stats(lv,incl),gn=S.traits.includes('Good Natured'),sk=S.traits.includes('Skilled'),t4=picks('Tag!',lv,incl)>0;
+ return SK.map(([k,,st])=>{
+  let v=2+2*s[st]+Math.ceil(s[6]/2);
+  if(S.tags.includes(k))v+=15;
+  if(t4&&S.tag4===k)v+=15;
+  if(gn)v+=['Bar','Med','Rep','Sci','Spc'].includes(k)?5:['EW','Exp','Gun','Mel','Una'].includes(k)?-5:0;
+  if(sk)v+=5;
+  for(let i=2;i<=lv;i++){const d=S.lv[i];if(d&&d.sk[k])v+=d.sk[k];}
+  return v;
+ });
+}
+function avail(lv){if(lv<2)return 0;const s=stats(lv-1,true);return 10+Math.floor(s[4]/2)+(picks('Educated',lv-1,true)?2:0);}
+function spent(lv){const d=S.lv[lv];return d?Object.values(d.sk).reduce((a,b)=>a+b,0):0;}
+function reqText(r){if(!r)return 'Nothing';return r.split(',').map(c=>c.split('|').map(one=>{
+ if(one[0]==='@')return one.slice(1)+' perk';const m=one.match(/^([A-Za-z]+)(<?)(\d+)$/);
+ const nm=m[1].length===1?STN['SPECIAL'.indexOf(m[1])]:SKN[m[1]];return m[2]?nm+' under '+m[3]:nm+' '+m[3];}).join(' or ')).join(', ');}
+function unmet(p,lv){
+ const out=[];if(p[5]&&!S.dlc)out.push('needs DLC');
+ if(p[0]>lv)out.push('level '+p[0]);
+ if(picks(p[1],lv,false)>=p[2])out.push('all ranks taken');
+ if(p[1]==='Intense Training'){const s=stats(lv,false);if(s.every(v=>v>=10))out.push('all stats at 10');}
+ if(!p[3])return out;
+ const s=stats(lv,false),k=skills(lv,false);
+ p[3].split(',').forEach(c=>{const ok=c.split('|').some(one=>{
+  if(one[0]==='@')return picks(one.slice(1),lv,false)>0;
+  const m=one.match(/^([A-Za-z]+)(<?)(\d+)$/);const n=+m[3];
+  const v=m[1].length===1?s['SPECIAL'.indexOf(m[1])]:Math.min(100,k[SK.findIndex(x=>x[0]===m[1])]);
+  return m[2]?v<n:v>=n;});if(!ok)out.push(reqText(c));});
+ return out;
+}
+function issues(lv){
+ const out=[],a=avail(lv),sp=spent(lv);
+ if(sp>a)out.push((sp-a)+' points over');
+ const d=S.lv[lv];
+ if(d&&d.perk){const p=PKN[d.perk];if(p){const u=unmet(p,lv);if(u.length)out.push(d.perk+': '+u.join(', '));}
+  if(d.perk==='Intense Training'&&stats(lv,false)[d.it]>=10)out.push(STN[d.it]+' already 10');}
+ const k=skills(lv,true);SK.forEach((x,i)=>{if(d&&d.sk[x[0]]&&k[i]>100)out.push(x[1]+' past 100');});
+ return out;
+}
+
+let S,hist=[];
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function commit(fn){hist.push(JSON.stringify(S));if(hist.length>60)hist.shift();fn();save();render();}
+function clean(o){
+ const b=blank();if(!o||typeof o!=='object')return b;
+ const n=x=>Number.isFinite(+x)?Math.round(+x):0;
+ b.name=typeof o.name==='string'?o.name.slice(0,60):b.name;
+ if(Array.isArray(o.sp)&&o.sp.length===7)b.sp=o.sp.map(v=>Math.max(1,Math.min(10,n(v))));
+ if(Array.isArray(o.traits))b.traits=o.traits.filter(t=>TR.some(x=>x[0]===t)).slice(0,2);
+ if(Array.isArray(o.tags))b.tags=o.tags.filter(t=>SKN[t]).slice(0,3);
+ b.tag4=SKN[o.tag4]?o.tag4:'';
+ b.cap=[30,35,40,45,50].includes(n(o.cap))?n(o.cap):50;b.dlc=o.dlc!==false;
+ if(Array.isArray(o.imp)&&o.imp.length===7)b.imp=o.imp.map(v=>v?1:0);
+ b.impLv=Math.max(1,Math.min(50,n(o.impLv)||10));
+ if(o.lv&&typeof o.lv==='object')for(const k in o.lv){const lv=n(k),d=o.lv[k];if(lv<2||lv>50||!d)continue;
+  const sk={};if(d.sk)for(const s in d.sk)if(SKN[s]&&n(d.sk[s])>0)sk[s]=Math.min(60,n(d.sk[s]));
+  b.lv[lv]={sk,perk:PKN[d.perk]&&lv%2===0?d.perk:'',it:Math.max(0,Math.min(6,n(d.it)))};}
+ b.view=Math.max(1,Math.min(50,n(o.view)||1));b.sel=Math.max(2,Math.min(50,n(o.sel)||2));
+ return b;
+}
+function sample(){
+ const b=blank();
+ Object.assign(b,{name:'Smooth-talking sharpshooter',sp:[5,6,5,5,8,6,5],traits:['Wild Wasteland','Trigger Discipline'],tags:['Gun','Spc','Lck'],tag4:'Rep',imp:[0,1,0,0,0,1,0],impLv:14,view:16,sel:16});
+ S=b;
+ const perks={2:'Rapid Reload',4:'Educated',6:'Toughness',8:'Strong Back',10:'Finesse',12:'Sniper',14:'Light Step',16:'Action Boy / Action Girl'};
+ const order=['Gun','Spc','Gun','Lck','Rep','Sci','Med','Spc','Snk','Gun','Rep'];let j=0;
+ for(let lv=2;lv<=16;lv++){const d=L(lv);if(perks[lv])d.perk=perks[lv];
+  let a=avail(lv),guard=0;while(a>0&&guard++<200){const k=order[j++%order.length];const cur=skills(lv,true)[SK.findIndex(x=>x[0]===k)];if(cur>=100)continue;d.sk[k]=(d.sk[k]||0)+1;a--;}}
+ return b;
+}
+try{const raw=localStorage.getItem(KEY);S=raw?clean(JSON.parse(raw)):sample();}catch(e){S=sample();}
+
+function rSpecial(){
+ const left=40-S.sp.reduce((a,b)=>a+b,0);
+ $('pool').textContent=left;$('pool').className='num'+(left<0?' over':'');
+ $('special').innerHTML=S.sp.map((v,i)=>`<div class="sp"><b>${STA[i]}</b><span class="mut">${STN[i]}</span><button id="sm${i}" data-a="sp" data-i="${i}" data-d="-1" aria-label="Lower ${STN[i]}" ${v<=1?'disabled':''}>−</button><span class="v">${v}</span><button id="sp${i}" data-a="sp" data-i="${i}" data-d="1" aria-label="Raise ${STN[i]}" ${v>=10||left<=0?'disabled':''}>+</button></div>`).join('');
+}
+function rTraits(){
+ $('tcount').textContent=S.traits.length+' of 2';
+ $('traits').innerHTML=TR.filter(t=>!t[2]||S.dlc).map((t,i)=>{const on=S.traits.includes(t[0]),off=!on&&S.traits.length>=2;
+  return `<label class="trait${off?' off':''}"><input type="checkbox" id="tr${i}" data-a="tr" data-n="${esc(t[0])}" ${on?'checked':''} ${off?'disabled':''}><span>${esc(t[0])}${t[2]?' <span class="dl">DLC</span>':''}</span><small>${esc(t[1])}</small></label>`;}).join('');
+}
+function rTags(){
+ $('tagcount').textContent=S.tags.length+' of 3';
+ $('tags').innerHTML=SK.map(([k,n])=>{const on=S.tags.includes(k);return `<button class="chip" id="tg${k}" data-a="tag" data-k="${k}" aria-pressed="${on}" ${!on&&S.tags.length>=3?'disabled':''}>${ic(SKG[k])}${n}</button>`;}).join('');
+ const has=Object.values(S.lv).some(d=>d.perk==='Tag!');
+ $('tag4wrap').innerHTML=has?`<div class="row"><label>Fourth tag from the Tag! perk<select id="tag4"><option value="">Choose a skill</option>${SK.filter(s=>!S.tags.includes(s[0])).map(s=>`<option value="${s[0]}" ${S.tag4===s[0]?'selected':''}>${s[1]}</option>`).join('')}</select></label></div>`:'';
+ const lim=stats(capOf(),true)[2];const used=S.imp.reduce((a,b)=>a+b,0);
+ $('imps').innerHTML=STA.map((s,i)=>`<button class="chip" id="im${i}" data-a="imp" data-i="${i}" aria-pressed="${!!S.imp[i]}">${STN[i]}</button>`).join('');
+ $('impnote').innerHTML=used>lim?`<span class="bad">${used} implants, Endurance allows ${lim}</span>`:`${used} of ${lim} used`;
+ $('implv').innerHTML=Array.from({length:capOf()},(_,i)=>`<option value="${i+1}" ${S.impLv===i+1?'selected':''}>Level ${i+1}</option>`).join('');
+}
+function rSnap(){
+ const cap=capOf();if(S.view>cap)S.view=cap;const v=S.view;
+ $('view').max=cap;$('view').value=v;$('viewn').textContent=v;
+ $('snapname').textContent=S.name||'Snapshot';
+ const s=stats(v,true),base=S.sp,k=skills(v,true);
+ $('cols').innerHTML=s.map((x,i)=>`<div class="col"><span class="num">${x}</span><i class="${x>base[i]?'up':''}" style="height:${x*10}%"></i><small>${STA[i]}</small></div>`).join('');
+ const hp=95+20*s[2]+5*v+(picks('Life Giver',v,true)?30:0);
+ const ap=65+3*s[5]+15*picks('Action Boy / Action Girl',v,true)+(S.traits.includes('Kamikaze')?10:0);
+ const cw=150+10*s[0]+(picks('Strong Back',v,true)?50:0)+(S.traits.includes('Hoarder')?25:0);
+ const cr=s[6]+(picks('Finesse',v,true)?5:0)+(S.traits.includes('Built to Destroy')?3:0);
+ const dt=3*picks('Toughness',v,true)-(S.traits.includes('Kamikaze')?2:0);
+ const nx=v<cap?avail(v+1):0;
+ $('figs').innerHTML=[[hp,'Hit points'],[ap,'Action points'],[cw,'Carry weight'],[cr+'%','Crit chance'],[(dt>0?'+':'')+dt,'DT from perks'],[v<cap?nx:'Cap','Skill pts next']].map(f=>`<div class="fig"><span class="num">${f[0]}</span><small>${f[1]}</small></div>`).join('');
+ const t4=picks('Tag!',v,true)?S.tag4:'';
+ $('bars').innerHTML=SK.map(([kk,n],i)=>{const val=Math.min(100,k[i]);return `<div class="bar${S.tags.includes(kk)||t4===kk?' tag':''}"><span>${sic(kk)}${n}</span><span class="t"><i style="width:${val}%"></i></span><span class="n">${val}</span></div>`;}).join('');
+ const tk=[];for(let i=2;i<=v;i++){const d=S.lv[i];if(d&&d.perk)tk.push(`<span>${pic(d.perk,'sm')}<em>${i}</em> ${esc(d.perk)}${d.perk==='Intense Training'?' ('+STA[d.it]+')':''}</span>`);}
+ $('taken').innerHTML=tk.length?tk.join(''):'<span class="mut">No perks by this level yet.</span>';
+}
+function rLevels(){
+ const cap=capOf();if(S.sel>cap)S.sel=cap;
+ const rows=[];for(let lv=2;lv<=cap;lv++){const a=avail(lv),sp=spent(lv),is=issues(lv),d=S.lv[lv];
+  const pk=lv%2===0?(d&&d.perk?pic(d.perk,'sm')+esc(d.perk):'<span class="mut">perk open</span>'):'<span class="mut">skills only</span>';
+  const st=is.length?'<span class="flag">check</span>':sp<a?`<span class="mut">${a-sp} left</span>`:'<span style="color:var(--tq)">✓</span>';
+  rows.push(`<button class="lrow" role="listitem" id="lv${lv}" data-a="sel" data-l="${lv}" aria-current="${S.sel===lv}"><span class="num">${lv}</span><span class="pk">${pk}</span><span class="st">${sp}/${a} ${st}</span></button>`);}
+ $('levels').innerHTML=rows.join('');
+}
+function rEditor(){
+ const lv=S.sel,d=L(lv),a=avail(lv),sp=spent(lv),k=skills(lv,true),is=issues(lv);
+ let h=`<div class="edhead"><h2>Level <span class="num">${lv}</span></h2><span><strong class="${sp>a?'bad':''}">${a-sp}</strong> of ${a} points left</span></div>`;
+ if(is.length)h+=`<p class="why"><span class="flag">check</span> ${is.map(esc).join('; ')}</p>`;
+ h+=`<div class="scroll"><table><thead><tr><th>Skill</th><th style="text-align:right">Now</th><th style="text-align:right">Spent here</th><th style="text-align:right">Change</th></tr></thead><tbody>`;
+ h+=SK.map(([kk,n],i)=>{const p=d.sk[kk]||0,val=k[i];return `<tr><td>${sic(kk)}${n}</td><td class="n${val>100?' bad':''}">${Math.min(100,val)}${val>100?' (+'+(val-100)+' wasted)':''}</td><td class="n pts">${p?'+'+p:''}</td><td class="b"><button id="m${kk}" data-a="sk" data-k="${kk}" data-d="-1" aria-label="Remove a point from ${n}" ${p?'':'disabled'}>−</button> <button id="p${kk}" data-a="sk" data-k="${kk}" data-d="1" aria-label="Add a point to ${n}" ${val>=100?'disabled':''}>+</button> <button id="f${kk}" data-a="sk" data-k="${kk}" data-d="5" aria-label="Add five points to ${n}" ${val>=100?'disabled':''}>+5</button></td></tr>`;}).join('');
+ h+=`</tbody></table></div><div class="row"><button id="fill" data-a="fill">Spend the rest on tag skills</button><button id="clr" data-a="clr">Clear this level</button><button id="nxt" data-a="nxt" ${lv>=capOf()?'disabled':''}>Next level</button></div>`;
+ if(lv%2===0){
+  const opts=PK.filter(p=>!p[5]||S.dlc).map(p=>({p,u:unmet(p,lv)}));
+  const okL=opts.filter(o=>!o.u.length),noL=opts.filter(o=>o.u.length&&o.p[0]<=lv);
+  const op=o=>`<option value="${esc(o.p[1])}" ${d.perk===o.p[1]?'selected':''} ${o.u.length&&d.perk!==o.p[1]?'disabled':''}>${esc(o.p[1])}${o.p[2]>1?' (rank '+(picks(o.p[1],lv,false)+1)+' of '+o.p[2]+')':''}${o.u.length?' · needs '+esc(o.u.join(', ')):''}</option>`;
+  h+=`<div class="row"><label>Perk for level ${lv}<select id="perk"><option value="">No perk chosen</option><optgroup label="You qualify">${okL.map(op).join('')}</optgroup><optgroup label="Not yet">${noL.map(op).join('')}</optgroup></select></label>`;
+  if(d.perk==='Intense Training')h+=`<label>Raise which stat<select id="it">${STN.map((n,i)=>`<option value="${i}" ${d.it===i?'selected':''}>${n}</option>`).join('')}</select></label>`;
+  h+='</div>';
+  const p=PKN[d.perk];h+=p?`<div class="pcard">${pic(d.perk,'big')}<div><strong>${esc(d.perk)}</strong><p class="mut">${esc(p[4])}</p></div></div>`:`<p class="mut">${okL.length} perks open to you here.</p>`;
+ } else h+='<p class="mut">Odd levels give skill points only.</p>';
+ $('editor').innerHTML=h;
+}
+function rIndex(){
+ const q=$('q').value.trim().toLowerCase(),only=$('okonly').checked,v=S.view;
+ const rows=PK.filter(p=>(!p[5]||S.dlc)&&(!q||(p[1]+' '+p[4]+' '+reqText(p[3])).toLowerCase().includes(q))).map(p=>{const ok=!unmet(p,Math.max(v,2)).length;return {p,ok};}).filter(r=>!only||r.ok);
+ $('idx').innerHTML=rows.length?rows.map(({p,ok})=>`<tr class="${ok?'ok':''}"><td>${p[0]}</td><td class="pn"><div class="pnw">${pic(p[1])}<span>${esc(p[1])}${p[2]>1?' <span class="mut">×'+p[2]+'</span>':''}${p[5]?'<span class="dl">DLC</span>':''}</span></div></td><td>${esc(reqText(p[3]))}</td><td>${esc(p[4])}</td></tr>`).join(''):'<tr><td colspan="4" class="mut">No perks match.</td></tr>';
+}
+function render(){
+ const f=document.activeElement&&document.activeElement.id;
+ $('bname').value=S.name;$('cap').value=S.cap;$('dlc').checked=S.dlc;$('cap').disabled=!S.dlc||S.traits.includes("Logan's Loophole");
+ $('undo').disabled=!hist.length;
+ rSpecial();rTraits();rTags();rSnap();rLevels();rEditor();rIndex();
+ if(f&&$(f)&&$(f)!==document.activeElement&&!$(f).disabled)$(f).focus({preventScroll:true});
+}
+
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-a]');if(!b||b.tagName==='INPUT')return;const a=b.dataset.a;
+ if(a==='sp')commit(()=>{const i=+b.dataset.i;S.sp[i]=Math.max(1,Math.min(10,S.sp[i]+ +b.dataset.d));});
+ else if(a==='tag')commit(()=>{const k=b.dataset.k;S.tags=S.tags.includes(k)?S.tags.filter(x=>x!==k):[...S.tags,k].slice(0,3);if(S.tags.includes(S.tag4))S.tag4='';});
+ else if(a==='imp')commit(()=>{const i=+b.dataset.i;S.imp[i]=S.imp[i]?0:1;});
+ else if(a==='sel'){S.sel=+b.dataset.l;S.view=S.sel;save();render();}
+ else if(a==='sk')commit(()=>{const d=L(S.sel),k=b.dataset.k,i=SK.findIndex(x=>x[0]===k);let n=+b.dataset.d;
+  if(n>0){const room=100-skills(S.sel,true)[i];n=Math.min(n,room);}d.sk[k]=Math.max(0,(d.sk[k]||0)+n);if(!d.sk[k])delete d.sk[k];});
+ else if(a==='fill')commit(()=>{const d=L(S.sel),tg=[...S.tags];if(S.tag4&&picks('Tag!',S.sel,false))tg.push(S.tag4);let left=avail(S.sel)-spent(S.sel),g=0,j=0;
+  while(left>0&&tg.length&&g++<300){const k=tg[j++%tg.length];if(skills(S.sel,true)[SK.findIndex(x=>x[0]===k)]>=100)continue;d.sk[k]=(d.sk[k]||0)+1;left--;}});
+ else if(a==='clr')commit(()=>{L(S.sel).sk={};});
+ else if(a==='nxt'){S.sel=Math.min(capOf(),S.sel+1);S.view=S.sel;save();render();$('lv'+S.sel)&&$('lv'+S.sel).scrollIntoView({block:'nearest'});}
+});
+document.addEventListener('change',e=>{
+ const t=e.target;
+ if(t.dataset.a==='tr')commit(()=>{const n=t.dataset.n;S.traits=t.checked?[...S.traits,n].slice(0,2):S.traits.filter(x=>x!==n);});
+ else if(t.id==='perk')commit(()=>{L(S.sel).perk=t.value;});
+ else if(t.id==='it')commit(()=>{L(S.sel).it=+t.value;});
+ else if(t.id==='tag4')commit(()=>{S.tag4=t.value;});
+ else if(t.id==='implv')commit(()=>{S.impLv=+t.value;});
+ else if(t.id==='cap')commit(()=>{S.cap=+t.value;});
+ else if(t.id==='dlc')commit(()=>{S.dlc=t.checked;if(!S.dlc)S.traits=S.traits.filter(n=>!TR.find(x=>x[0]===n)[2]);});
+ else if(t.id==='okonly')rIndex();
+});
+$('bname').addEventListener('input',e=>{S.name=e.target.value.slice(0,60);$('snapname').textContent=S.name||'Snapshot';save();});
+$('view').addEventListener('input',e=>{S.view=+e.target.value;save();rSnap();rIndex();});
+$('q').addEventListener('input',rIndex);
+$('undo').addEventListener('click',()=>{if(!hist.length)return;S=JSON.parse(hist.pop());save();render();});
+$('reset').addEventListener('click',()=>commit(()=>{S=blank();}));
+$('copy').addEventListener('click',async()=>{
+ const code=btoa(unescape(encodeURIComponent(JSON.stringify(S))));$('io').open=true;$('code').value=code;
+ try{await navigator.clipboard.writeText(code);$('iomsg').textContent='Copied. Paste it here later to load this build.';}
+ catch(err){$('iomsg').textContent='Select the code above and copy it.';$('code').select();}
+});
+$('load').addEventListener('click',()=>{
+ try{const o=JSON.parse(decodeURIComponent(escape(atob($('code').value.trim()))));commit(()=>{S=clean(o);});$('iomsg').textContent='Loaded.';}
+ catch(err){$('iomsg').textContent='That code could not be read.';}
+});
+render();
+}
+</script>
+</body>
+</html>
